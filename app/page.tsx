@@ -88,170 +88,150 @@ ${brief.watch_outs.map(b => `• ${b}`).join("\n")}`;
     navigator.clipboard.writeText(text);
   }
 
-  async function downloadPDF() {
+  function downloadPDF() {
     if (!brief) return;
 
-    // Dynamically import jsPDF to keep it client-side only
-    const { jsPDF } = await import("jspdf");
+    const esc = (s: string) =>
+      s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-    const doc = new jsPDF({
-      orientation: "portrait",
-      unit: "pt",
-      format: "letter",
-    });
-
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const marginLeft = 60;
-    const marginRight = 60;
-    const contentWidth = pageWidth - marginLeft - marginRight;
-    let y = 60;
-
-    // Helper: add text with word wrap and page overflow handling
-    function addWrappedText(
-      text: string,
-      x: number,
-      startY: number,
-      maxWidth: number,
-      lineHeight: number
-    ): number {
-      const lines = doc.splitTextToSize(text, maxWidth);
-      lines.forEach((line: string) => {
-        if (startY + lineHeight > pageHeight - 50) {
-          doc.addPage();
-          startY = 60;
-        }
-        doc.text(line, x, startY);
-        startY += lineHeight;
-      });
-      return startY;
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${esc(brief.title)} — Creative POV Brief</title>
+  <style>
+    @page { margin: 56pt 60pt; }
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
-
-    // Helper: section label
-    function addSectionLabel(label: string, startY: number): number {
-      if (startY + 20 > pageHeight - 50) {
-        doc.addPage();
-        startY = 60;
-      }
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(8);
-      doc.setTextColor(153, 153, 153);
-      doc.text(label.toUpperCase(), marginLeft, startY);
-      return startY + 18;
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Georgia, 'Times New Roman', serif;
+      color: #1a1a1a;
+      background: white;
+      font-size: 13pt;
+      line-height: 1.6;
     }
-
-    // Title
-    doc.setFont("times", "normal");
-    doc.setFontSize(22);
-    doc.setTextColor(26, 26, 26);
-    y = addWrappedText(brief.title, marginLeft, y, contentWidth, 28);
-    y += 6;
-
-    // Divider
-    doc.setDrawColor(220, 220, 220);
-    doc.line(marginLeft, y, pageWidth - marginRight, y);
-    y += 24;
-
-    // The Creative Problem
-    y = addSectionLabel("The Creative Problem", y);
-    doc.setFont("times", "normal");
-    doc.setFontSize(13);
-    doc.setTextColor(51, 51, 51);
-    y = addWrappedText(brief.creative_problem, marginLeft, y, contentWidth, 20);
-    y += 20;
-
-    // Audience Reality
-    y = addSectionLabel("Audience Reality", y);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(12);
-    doc.setTextColor(68, 68, 68);
-    brief.audience_reality.forEach((item) => {
-      y = addWrappedText(`• ${item}`, marginLeft + 4, y, contentWidth - 4, 18);
-      y += 4;
-    });
-    y += 14;
-
-    // Creative POV — shaded box
-    y = addSectionLabel("Creative POV", y);
-    const povStartY = y - 8;
-    doc.setFillColor(250, 249, 247);
-    const povLines = brief.creative_pov;
-    const povLineHeight = 19;
-    const povBlockHeight = povLines.length * povLineHeight + 24;
-    if (y + povBlockHeight < pageHeight - 50) {
-      doc.rect(marginLeft, povStartY, contentWidth, povBlockHeight, "F");
-      doc.setFillColor(26, 26, 26);
-      doc.rect(marginLeft, povStartY, 3, povBlockHeight, "F");
+    h1 {
+      font-size: 20pt;
+      font-weight: 400;
+      margin-bottom: 6px;
+      letter-spacing: -0.3px;
     }
-    doc.setFont("times", "italic");
-    doc.setFontSize(13);
-    doc.setTextColor(26, 26, 26);
-    povLines.forEach((line) => {
-      y = addWrappedText(line, marginLeft + 16, y, contentWidth - 20, povLineHeight);
-    });
-    y += 20;
-
-    // Tone & Language Guardrails
-    y = addSectionLabel("Tone & Language Guardrails", y);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(12);
-    doc.setTextColor(68, 68, 68);
-    brief.tone_guardrails.bullets.forEach((item) => {
-      y = addWrappedText(`• ${item}`, marginLeft + 4, y, contentWidth - 4, 18);
-      y += 4;
-    });
-    if (brief.tone_guardrails.sample_line) {
-      y += 8;
-      doc.setFillColor(245, 245, 245);
-      const quoteLines = doc.splitTextToSize(
-        `"${brief.tone_guardrails.sample_line}"`,
-        contentWidth - 24
-      );
-      const quoteBlockHeight = quoteLines.length * 18 + 20;
-      doc.rect(marginLeft, y - 10, contentWidth, quoteBlockHeight, "F");
-      doc.setFont("times", "italic");
-      doc.setFontSize(12);
-      doc.setTextColor(85, 85, 85);
-      y = addWrappedText(
-        `"${brief.tone_guardrails.sample_line}"`,
-        marginLeft + 12,
-        y + 2,
-        contentWidth - 24,
-        18
-      );
-      y += 14;
+    hr {
+      border: none;
+      border-top: 1px solid #ddd;
+      margin: 18px 0 22px;
     }
-    y += 14;
-
-    // Watch-Outs
-    y = addSectionLabel("Watch-Outs", y);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(12);
-    doc.setTextColor(146, 64, 14);
-    brief.watch_outs.forEach((item) => {
-      y = addWrappedText(`• ${item}`, marginLeft + 4, y, contentWidth - 4, 18);
-      y += 4;
-    });
-
-    // Footer
-    const totalPages = (doc.internal as any).getNumberOfPages();
-    for (let i = 1; i <= totalPages; i++) {
-      doc.setPage(i);
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
-      doc.setTextColor(153, 153, 153);
-      doc.text("Creative POV Brief", marginLeft, pageHeight - 28);
-      doc.text(
-        `${i} / ${totalPages}`,
-        pageWidth - marginRight,
-        pageHeight - 28,
-        { align: "right" }
-      );
+    .label {
+      font-family: -apple-system, Helvetica, Arial, sans-serif;
+      font-size: 7pt;
+      font-weight: 700;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 1.8px;
+      margin-bottom: 9px;
     }
+    .section { margin-bottom: 22px; }
+    p.body-text { font-size: 12.5pt; color: #333; line-height: 1.75; }
+    ul { list-style: none; padding: 0; }
+    li {
+      font-family: -apple-system, Helvetica, Arial, sans-serif;
+      font-size: 11.5pt;
+      color: #444;
+      padding-left: 14px;
+      margin-bottom: 5px;
+      line-height: 1.6;
+      position: relative;
+    }
+    li::before { content: "•"; position: absolute; left: 0; }
+    .pov-box {
+      background: #faf9f7;
+      border-left: 3px solid #1a1a1a;
+      padding: 16px 20px;
+    }
+    .pov-box p {
+      font-style: italic;
+      color: #1a1a1a;
+      font-size: 12.5pt;
+      margin-bottom: 5px;
+      line-height: 1.65;
+    }
+    .sample {
+      background: #f5f5f5;
+      padding: 12px 16px;
+      margin-top: 12px;
+      font-style: italic;
+      color: #555;
+      font-size: 11.5pt;
+      line-height: 1.6;
+    }
+    li.watch-out { color: #92400e; }
+    .footer {
+      font-family: -apple-system, Helvetica, Arial, sans-serif;
+      font-size: 7.5pt;
+      color: #bbb;
+      margin-top: 36px;
+      border-top: 1px solid #eee;
+      padding-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>${esc(brief.title)}</h1>
+  <hr />
 
-    // Save
-    const safeTitle = brief.title.replace(/[^a-z0-9]/gi, "-").toLowerCase();
-    doc.save(`${safeTitle}-creative-pov.pdf`);
+  <div class="section">
+    <div class="label">The Creative Problem</div>
+    <p class="body-text">${esc(brief.creative_problem)}</p>
+  </div>
+
+  <div class="section">
+    <div class="label">Audience Reality</div>
+    <ul>${brief.audience_reality.map(item => `<li>${esc(item)}</li>`).join("")}</ul>
+  </div>
+
+  <div class="section">
+    <div class="label">Creative POV</div>
+    <div class="pov-box">
+      ${brief.creative_pov.map(line => `<p>${esc(line)}</p>`).join("")}
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="label">Tone &amp; Language Guardrails</div>
+    <ul>${brief.tone_guardrails.bullets.map(item => `<li>${esc(item)}</li>`).join("")}</ul>
+    ${brief.tone_guardrails.sample_line ? `<div class="sample">&ldquo;${esc(brief.tone_guardrails.sample_line)}&rdquo;</div>` : ""}
+  </div>
+
+  <div class="section">
+    <div class="label">Watch-Outs</div>
+    <ul>${brief.watch_outs.map(item => `<li class="watch-out">${esc(item)}</li>`).join("")}</ul>
+  </div>
+
+  <div class="footer">Creative POV Brief</div>
+</body>
+</html>`;
+
+    // Inject into a hidden iframe and trigger print → Save as PDF
+    const iframe = document.createElement("iframe");
+    iframe.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;border:0;opacity:0;";
+    document.body.appendChild(iframe);
+
+    const win = iframe.contentWindow;
+    if (!win) return;
+
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+
+    setTimeout(() => {
+      win.focus();
+      win.print();
+      setTimeout(() => {
+        if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+      }, 2000);
+    }, 400);
   }
 
   function reset() {
