@@ -88,6 +88,172 @@ ${brief.watch_outs.map(b => `• ${b}`).join("\n")}`;
     navigator.clipboard.writeText(text);
   }
 
+  async function downloadPDF() {
+    if (!brief) return;
+
+    // Dynamically import jsPDF to keep it client-side only
+    const { jsPDF } = await import("jspdf");
+
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "pt",
+      format: "letter",
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const marginLeft = 60;
+    const marginRight = 60;
+    const contentWidth = pageWidth - marginLeft - marginRight;
+    let y = 60;
+
+    // Helper: add text with word wrap and page overflow handling
+    function addWrappedText(
+      text: string,
+      x: number,
+      startY: number,
+      maxWidth: number,
+      lineHeight: number
+    ): number {
+      const lines = doc.splitTextToSize(text, maxWidth);
+      lines.forEach((line: string) => {
+        if (startY + lineHeight > pageHeight - 50) {
+          doc.addPage();
+          startY = 60;
+        }
+        doc.text(line, x, startY);
+        startY += lineHeight;
+      });
+      return startY;
+    }
+
+    // Helper: section label
+    function addSectionLabel(label: string, startY: number): number {
+      if (startY + 20 > pageHeight - 50) {
+        doc.addPage();
+        startY = 60;
+      }
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(153, 153, 153);
+      doc.text(label.toUpperCase(), marginLeft, startY);
+      return startY + 18;
+    }
+
+    // Title
+    doc.setFont("times", "normal");
+    doc.setFontSize(22);
+    doc.setTextColor(26, 26, 26);
+    y = addWrappedText(brief.title, marginLeft, y, contentWidth, 28);
+    y += 6;
+
+    // Divider
+    doc.setDrawColor(220, 220, 220);
+    doc.line(marginLeft, y, pageWidth - marginRight, y);
+    y += 24;
+
+    // The Creative Problem
+    y = addSectionLabel("The Creative Problem", y);
+    doc.setFont("times", "normal");
+    doc.setFontSize(13);
+    doc.setTextColor(51, 51, 51);
+    y = addWrappedText(brief.creative_problem, marginLeft, y, contentWidth, 20);
+    y += 20;
+
+    // Audience Reality
+    y = addSectionLabel("Audience Reality", y);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(12);
+    doc.setTextColor(68, 68, 68);
+    brief.audience_reality.forEach((item) => {
+      y = addWrappedText(`• ${item}`, marginLeft + 4, y, contentWidth - 4, 18);
+      y += 4;
+    });
+    y += 14;
+
+    // Creative POV — shaded box
+    y = addSectionLabel("Creative POV", y);
+    const povStartY = y - 8;
+    doc.setFillColor(250, 249, 247);
+    const povLines = brief.creative_pov;
+    const povLineHeight = 19;
+    const povBlockHeight = povLines.length * povLineHeight + 24;
+    if (y + povBlockHeight < pageHeight - 50) {
+      doc.rect(marginLeft, povStartY, contentWidth, povBlockHeight, "F");
+      doc.setFillColor(26, 26, 26);
+      doc.rect(marginLeft, povStartY, 3, povBlockHeight, "F");
+    }
+    doc.setFont("times", "italic");
+    doc.setFontSize(13);
+    doc.setTextColor(26, 26, 26);
+    povLines.forEach((line) => {
+      y = addWrappedText(line, marginLeft + 16, y, contentWidth - 20, povLineHeight);
+    });
+    y += 20;
+
+    // Tone & Language Guardrails
+    y = addSectionLabel("Tone & Language Guardrails", y);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(12);
+    doc.setTextColor(68, 68, 68);
+    brief.tone_guardrails.bullets.forEach((item) => {
+      y = addWrappedText(`• ${item}`, marginLeft + 4, y, contentWidth - 4, 18);
+      y += 4;
+    });
+    if (brief.tone_guardrails.sample_line) {
+      y += 8;
+      doc.setFillColor(245, 245, 245);
+      const quoteLines = doc.splitTextToSize(
+        `"${brief.tone_guardrails.sample_line}"`,
+        contentWidth - 24
+      );
+      const quoteBlockHeight = quoteLines.length * 18 + 20;
+      doc.rect(marginLeft, y - 10, contentWidth, quoteBlockHeight, "F");
+      doc.setFont("times", "italic");
+      doc.setFontSize(12);
+      doc.setTextColor(85, 85, 85);
+      y = addWrappedText(
+        `"${brief.tone_guardrails.sample_line}"`,
+        marginLeft + 12,
+        y + 2,
+        contentWidth - 24,
+        18
+      );
+      y += 14;
+    }
+    y += 14;
+
+    // Watch-Outs
+    y = addSectionLabel("Watch-Outs", y);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(12);
+    doc.setTextColor(146, 64, 14);
+    brief.watch_outs.forEach((item) => {
+      y = addWrappedText(`• ${item}`, marginLeft + 4, y, contentWidth - 4, 18);
+      y += 4;
+    });
+
+    // Footer
+    const totalPages = (doc.internal as any).getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(153, 153, 153);
+      doc.text("Creative POV Brief", marginLeft, pageHeight - 28);
+      doc.text(
+        `${i} / ${totalPages}`,
+        pageWidth - marginRight,
+        pageHeight - 28,
+        { align: "right" }
+      );
+    }
+
+    // Save
+    const safeTitle = brief.title.replace(/[^a-z0-9]/gi, "-").toLowerCase();
+    doc.save(`${safeTitle}-creative-pov.pdf`);
+  }
+
   function reset() {
     setBrief(null);
     setFileName(null);
@@ -148,6 +314,9 @@ ${brief.watch_outs.map(b => `• ${b}`).join("\n")}`;
               <div style={styles.briefActions}>
                 <button onClick={copyToClipboard} style={styles.copyButton}>
                   Copy
+                </button>
+                <button onClick={downloadPDF} style={styles.downloadButton}>
+                  Download PDF
                 </button>
                 <button onClick={reset} style={styles.resetButton}>
                   New Brief
@@ -319,6 +488,16 @@ const styles: { [key: string]: React.CSSProperties } = {
     flexShrink: 0,
   },
   copyButton: {
+    padding: "8px 14px",
+    fontSize: 13,
+    color: "#555",
+    background: "#f5f5f5",
+    border: "1px solid #e0e0e0",
+    borderRadius: 4,
+    cursor: "pointer",
+    fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif",
+  },
+  downloadButton: {
     padding: "8px 14px",
     fontSize: 13,
     color: "#555",
