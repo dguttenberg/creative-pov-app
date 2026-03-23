@@ -1,206 +1,648 @@
-import { NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
-import pdf from "pdf-parse";
-import mammoth from "mammoth";
+"use client";
 
-const BRAIN_ENDPOINT = process.env.BRAIN_ENDPOINT;
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+import { useState, useRef } from "react";
 
-const SYSTEM_PROMPT = `You are a senior creative director writing a brief for your creative team.
-You write with clarity and opinion. You sound human, not corporate. You give direction, not documentation.
-Your briefs replace kickoff meetings for routine work. They should take under 2 minutes to read.
+type POVBrief = {
+  title: string;
+  main_message: string;
+  explicitly_requested: string[];
+  creative_problem: string;
+  audience_reality: string[];
+  creative_pov: string[];
+  tone_guardrails: {
+    bullets: string[];
+    sample_line?: string;
+  };
+  deliverables: string[];
+  watch_outs: string[];
+};
 
-You will receive a project request and some supplementary context. Transform it into a Creative POV Brief.
+export default function Home() {
+  const [brief, setBrief] = useState<POVBrief | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-Output ONLY valid JSON with this exact structure:
-{
-  "title": "project title",
-  "main_message": "One sentence. The single thing the audience should think, feel, or do after seeing this work.",
-  "explicitly_requested": ["direct client ask 1", "direct client ask 2"],
-  "creative_problem": "2-3 sentences describing the core creative challenge",
-  "audience_reality": ["bullet 1", "bullet 2", "bullet 3"],
-  "creative_pov": ["short opinionated line 1", "line 2"],
-  "tone_guardrails": {
-    "bullets": ["guardrail 1", "guardrail 2", "guardrail 3"],
-    "sample_line": "optional example of the right tone"
+  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setFileName(file.name);
+    setLoading(true);
+    setError(null);
+    setBrief(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Generation failed");
+      }
+
+      const data = await res.json();
+      setBrief(data.brief);
+    } catch (err: any) {
+      setError(err.message || "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file && fileInputRef.current) {
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      fileInputRef.current.files = dt.files;
+      handleFileSelect({ target: { files: dt.files } } as any);
+    }
+  }
+
+  function copyToClipboard() {
+    if (!brief) return;
+
+    const text = `# ${brief.title}
+
+## Main Message
+${brief.main_message}
+
+## Explicitly Requested
+${brief.explicitly_requested.map(b => `• ${b}`).join("\n")}
+
+## The Creative Problem
+${brief.creative_problem}
+
+## Audience Reality
+${brief.audience_reality.map(b => `• ${b}`).join("\n")}
+
+## Creative POV
+${brief.creative_pov.join("\n")}
+
+## Tone & Language Guardrails
+${brief.tone_guardrails.bullets.map(b => `• ${b}`).join("\n")}
+${brief.tone_guardrails.sample_line ? `\n"${brief.tone_guardrails.sample_line}"` : ""}
+
+## Deliverables
+${brief.deliverables.map(b => `☐ ${b}`).join("\n")}
+
+## Watch-Outs
+${brief.watch_outs.map(b => `• ${b}`).join("\n")}`;
+
+    navigator.clipboard.writeText(text);
+  }
+
+  function downloadPDF() {
+    if (!brief) return;
+
+    const esc = (s: string) =>
+      s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${esc(brief.title)} — Creative POV Brief</title>
+  <style>
+    @page { margin: 56pt 60pt; }
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Georgia, 'Times New Roman', serif;
+      color: #1a1a1a;
+      background: white;
+      font-size: 13pt;
+      line-height: 1.6;
+    }
+    h1 {
+      font-size: 20pt;
+      font-weight: 400;
+      margin-bottom: 6px;
+      letter-spacing: -0.3px;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #ddd;
+      margin: 18px 0 22px;
+    }
+    .label {
+      font-family: -apple-system, Helvetica, Arial, sans-serif;
+      font-size: 7pt;
+      font-weight: 700;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 1.8px;
+      margin-bottom: 9px;
+    }
+    .section { margin-bottom: 22px; }
+    p.body-text { font-size: 12.5pt; color: #333; line-height: 1.75; }
+    .main-message {
+      font-size: 15pt;
+      font-weight: 400;
+      color: #1a1a1a;
+      line-height: 1.5;
+      font-style: italic;
+    }
+    ul { list-style: none; padding: 0; }
+    li {
+      font-family: -apple-system, Helvetica, Arial, sans-serif;
+      font-size: 11.5pt;
+      color: #444;
+      padding-left: 14px;
+      margin-bottom: 5px;
+      line-height: 1.6;
+      position: relative;
+    }
+    li::before { content: "•"; position: absolute; left: 0; }
+    li.explicit::before { content: "—"; position: absolute; left: 0; color: #1a1a1a; }
+    li.explicit { color: #1a1a1a; font-weight: 500; }
+    li.deliverable::before { content: "☐"; position: absolute; left: 0; }
+    .pov-box {
+      background: #faf9f7;
+      border-left: 3px solid #1a1a1a;
+      padding: 16px 20px;
+    }
+    .pov-box p {
+      font-style: italic;
+      color: #1a1a1a;
+      font-size: 12.5pt;
+      margin-bottom: 5px;
+      line-height: 1.65;
+    }
+    .sample {
+      background: #f5f5f5;
+      padding: 12px 16px;
+      margin-top: 12px;
+      font-style: italic;
+      color: #555;
+      font-size: 11.5pt;
+      line-height: 1.6;
+    }
+    li.watch-out { color: #92400e; }
+    .footer {
+      font-family: -apple-system, Helvetica, Arial, sans-serif;
+      font-size: 7.5pt;
+      color: #bbb;
+      margin-top: 36px;
+      border-top: 1px solid #eee;
+      padding-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>${esc(brief.title)}</h1>
+  <hr />
+
+  <div class="section">
+    <div class="label">Main Message</div>
+    <p class="main-message">${esc(brief.main_message)}</p>
+  </div>
+
+  ${brief.explicitly_requested?.length ? `
+  <div class="section">
+    <div class="label">Explicitly Requested</div>
+    <ul>${brief.explicitly_requested.map(item => `<li class="explicit">${esc(item)}</li>`).join("")}</ul>
+  </div>` : ""}
+
+  <div class="section">
+    <div class="label">The Creative Problem</div>
+    <p class="body-text">${esc(brief.creative_problem)}</p>
+  </div>
+
+  <div class="section">
+    <div class="label">Audience Reality</div>
+    <ul>${brief.audience_reality.map(item => `<li>${esc(item)}</li>`).join("")}</ul>
+  </div>
+
+  <div class="section">
+    <div class="label">Creative POV</div>
+    <div class="pov-box">
+      ${brief.creative_pov.map(line => `<p>${esc(line)}</p>`).join("")}
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="label">Tone &amp; Language Guardrails</div>
+    <ul>${brief.tone_guardrails.bullets.map(item => `<li>${esc(item)}</li>`).join("")}</ul>
+    ${brief.tone_guardrails.sample_line ? `<div class="sample">&ldquo;${esc(brief.tone_guardrails.sample_line)}&rdquo;</div>` : ""}
+  </div>
+
+  ${brief.deliverables?.length ? `
+  <div class="section">
+    <div class="label">Deliverables</div>
+    <ul>${brief.deliverables.map(item => `<li class="deliverable">${esc(item)}</li>`).join("")}</ul>
+  </div>` : ""}
+
+  <div class="section">
+    <div class="label">Watch-Outs</div>
+    <ul>${brief.watch_outs.map(item => `<li class="watch-out">${esc(item)}</li>`).join("")}</ul>
+  </div>
+
+  <div class="footer">Creative POV Brief</div>
+</body>
+</html>`;
+
+    const iframe = document.createElement("iframe");
+    iframe.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;border:0;opacity:0;";
+    document.body.appendChild(iframe);
+
+    const win = iframe.contentWindow;
+    if (!win) return;
+
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+
+    setTimeout(() => {
+      win.focus();
+      win.print();
+      setTimeout(() => {
+        if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+      }, 2000);
+    }, 400);
+  }
+
+  function reset() {
+    setBrief(null);
+    setFileName(null);
+    setError(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }
+
+  return (
+    <main style={styles.main}>
+      <div style={styles.container}>
+        {!brief && !loading && (
+          <>
+            <header style={styles.header}>
+              <h1 style={styles.title}>Creative POV Brief</h1>
+              <p style={styles.tagline}>Drop a request. Get creative direction.</p>
+            </header>
+
+            <div
+              style={styles.dropZone}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.txt,.docx"
+                onChange={handleFileSelect}
+                style={styles.hiddenInput}
+              />
+              <div style={styles.dropContent}>
+                <span style={styles.dropIcon}>↑</span>
+                <p style={styles.dropText}>Drop a file or click to upload</p>
+                <p style={styles.dropHint}>PDF, DOCX, TXT, JPG, PNG</p>
+              </div>
+            </div>
+
+            {error && <div style={styles.error}>{error}</div>}
+          </>
+        )}
+
+        {loading && (
+          <div style={styles.loadingContainer}>
+            <p style={styles.loadingFile}>{fileName}</p>
+            <p style={styles.loadingText}>Reading the room...</p>
+          </div>
+        )}
+
+        {brief && (
+          <article style={styles.brief}>
+            <div style={styles.briefHeader}>
+              <h2 style={styles.briefTitle}>{brief.title}</h2>
+              <div style={styles.briefActions}>
+                <button onClick={copyToClipboard} style={styles.copyButton}>
+                  Copy
+                </button>
+                <button onClick={downloadPDF} style={styles.downloadButton}>
+                  Download PDF
+                </button>
+                <button onClick={reset} style={styles.resetButton}>
+                  New Brief
+                </button>
+              </div>
+            </div>
+
+            <section style={styles.section}>
+              <h3 style={styles.sectionTitle}>Main Message</h3>
+              <p style={styles.mainMessage}>{brief.main_message}</p>
+            </section>
+
+            {brief.explicitly_requested?.length > 0 && (
+              <section style={styles.section}>
+                <h3 style={styles.sectionTitle}>Explicitly Requested</h3>
+                <ul style={styles.bulletList}>
+                  {brief.explicitly_requested.map((item, i) => (
+                    <li key={i} style={styles.explicitItem}>— {item}</li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            <section style={styles.section}>
+              <h3 style={styles.sectionTitle}>The Creative Problem</h3>
+              <p style={styles.paragraph}>{brief.creative_problem}</p>
+            </section>
+
+            <section style={styles.section}>
+              <h3 style={styles.sectionTitle}>Audience Reality</h3>
+              <ul style={styles.bulletList}>
+                {brief.audience_reality.map((item, i) => (
+                  <li key={i} style={styles.bullet}>{item}</li>
+                ))}
+              </ul>
+            </section>
+
+            <section style={styles.section}>
+              <h3 style={styles.sectionTitle}>Creative POV</h3>
+              <div style={styles.povBox}>
+                {brief.creative_pov.map((line, i) => (
+                  <p key={i} style={styles.povLine}>{line}</p>
+                ))}
+              </div>
+            </section>
+
+            <section style={styles.section}>
+              <h3 style={styles.sectionTitle}>Tone & Language Guardrails</h3>
+              <ul style={styles.bulletList}>
+                {brief.tone_guardrails.bullets.map((item, i) => (
+                  <li key={i} style={styles.bullet}>{item}</li>
+                ))}
+              </ul>
+              {brief.tone_guardrails.sample_line && (
+                <blockquote style={styles.sampleLine}>
+                  "{brief.tone_guardrails.sample_line}"
+                </blockquote>
+              )}
+            </section>
+
+            {brief.deliverables?.length > 0 && (
+              <section style={styles.section}>
+                <h3 style={styles.sectionTitle}>Deliverables</h3>
+                <ul style={styles.bulletList}>
+                  {brief.deliverables.map((item, i) => (
+                    <li key={i} style={styles.deliverable}>☐ {item}</li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            <section style={styles.section}>
+              <h3 style={styles.sectionTitle}>Watch-Outs</h3>
+              <ul style={styles.bulletList}>
+                {brief.watch_outs.map((item, i) => (
+                  <li key={i} style={styles.watchOut}>{item}</li>
+                ))}
+              </ul>
+            </section>
+          </article>
+        )}
+      </div>
+    </main>
+  );
+}
+
+const styles: { [key: string]: React.CSSProperties } = {
+  main: {
+    minHeight: "100vh",
+    background: "#faf9f7",
+    padding: "60px 20px",
+    fontFamily: "'Georgia', serif",
   },
-  "deliverables": ["deliverable 1", "deliverable 2"],
-  "watch_outs": ["watch out 1", "watch out 2"]
-}
-
-Rules:
-- Total brief should be ~300 words max
-- Sound like a creative director, not a strategist or PM
-- Be opinionated and direct
-- No jargon, no fluff
-- CRITICAL: Only include claims — about audience, context, or strategy — that are directly supported by the original request. Do not infer, embellish, or invent. If the request doesn't say it, don't say it.
-- main_message must be a single declarative sentence rooted in what the request actually asks for
-- explicitly_requested: lift these directly and literally from the source material — these are client mandates, not interpretation
-- creative_pov should be 2 lines max — opinionated guidance, not requirements
-- deliverables: list exactly what is being asked for, taken from the request — no additions
-- watch_outs should be specific to this project`;
-
-async function extractTextFromFile(file: File): Promise<string> {
-  const fileType = file.type;
-  const fileName = file.name.toLowerCase();
-
-  if (fileType === "text/plain" || fileName.endsWith(".txt")) {
-    return await file.text();
-  }
-
-  if (fileType === "application/pdf" || fileName.endsWith(".pdf")) {
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const data = await pdf(buffer);
-    return data.text;
-  }
-
-  if (
-    fileType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-    fileName.endsWith(".docx")
-  ) {
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const result = await mammoth.extractRawText({ buffer });
-    return result.value;
-  }
-
-  if (
-    fileType.startsWith("image/") ||
-    fileName.endsWith(".jpg") ||
-    fileName.endsWith(".jpeg") ||
-    fileName.endsWith(".png")
-  ) {
-    return `[IMAGE FILE: ${file.name}]`;
-  }
-
-  throw new Error(`Unsupported file type: ${fileType}`);
-}
-
-async function extractTextFromImage(
-  file: File,
-  anthropic: Anthropic
-): Promise<string> {
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const base64 = buffer.toString("base64");
-  const mediaType = file.type as "image/jpeg" | "image/png" | "image/gif" | "image/webp";
-
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 2000,
-    messages: [
-      {
-        role: "user",
-        content: [
-          {
-            type: "image",
-            source: {
-              type: "base64",
-              media_type: mediaType,
-              data: base64,
-            },
-          },
-          {
-            type: "text",
-            text: "Extract all text from this image. If it's a brief, document, or form, capture all the content. Return only the extracted text, no commentary.",
-          },
-        ],
-      },
-    ],
-  });
-
-  return response.content[0].type === "text" ? response.content[0].text : "";
-}
-
-export async function POST(request: Request) {
-  try {
-    const formData = await request.formData();
-    const file = formData.get("file") as File | null;
-
-    if (!file) {
-      return NextResponse.json({ error: "No file provided" }, { status: 400 });
-    }
-
-    const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
-
-    let requestText: string;
-    const fileName = file.name.toLowerCase();
-
-    if (
-      file.type.startsWith("image/") ||
-      fileName.endsWith(".jpg") ||
-      fileName.endsWith(".jpeg") ||
-      fileName.endsWith(".png")
-    ) {
-      requestText = await extractTextFromImage(file, anthropic);
-    } else {
-      requestText = await extractTextFromFile(file);
-    }
-
-    if (!requestText || requestText.trim().length < 10) {
-      return NextResponse.json(
-        { error: "Could not extract text from file" },
-        { status: 400 }
-      );
-    }
-
-    const brainResponse = await fetch(BRAIN_ENDPOINT as string, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ request_text: requestText }),
-    });
-
-    if (!brainResponse.ok) {
-      return NextResponse.json(
-        { error: "Failed to interpret request" },
-        { status: 500 }
-      );
-    }
-
-    const brainData = await brainResponse.json();
-    const intent = brainData.intent_object;
-
-    const briefContext = `
-Project Source: ${file.name}
-
-ORIGINAL REQUEST (primary source — trust this above all else):
-${requestText}
-
-SUPPLEMENTARY CONTEXT (use only where directly supported by the original request above — do not introduce claims from here that aren't in the request):
-- Stated Purpose: ${intent?.intent?.why?.stated || "Not specified"}
-- Deliverables: ${intent?.intent?.what?.deliverables?.map((d: any) => d.deliverable_name).join(", ") || "Not specified"}
-- Channels: ${intent?.intent?.where?.channels?.join(", ") || "Not specified"}
-- Creative Constraints: ${intent?.intent?.where?.constraints?.join("; ") || "None specified"}
-
-Generate a Creative POV Brief for this project.`;
-
-    const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1024,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: briefContext }],
-    });
-
-    const responseText =
-      message.content[0].type === "text" ? message.content[0].text : "";
-
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      return NextResponse.json(
-        { error: "Failed to generate brief" },
-        { status: 500 }
-      );
-    }
-
-    const brief = JSON.parse(jsonMatch[0]);
-
-    return NextResponse.json({
-      success: true,
-      brief,
-    });
-  } catch (err: any) {
-    console.error("Generate error:", err);
-    return NextResponse.json(
-      { error: err.message || "Generation failed" },
-      { status: 500 }
-    );
-  }
-}
+  container: {
+    maxWidth: 640,
+    margin: "0 auto",
+  },
+  header: {
+    textAlign: "center",
+    marginBottom: 40,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: 400,
+    color: "#1a1a1a",
+    margin: 0,
+    letterSpacing: "-0.5px",
+  },
+  tagline: {
+    fontSize: 15,
+    color: "#888",
+    marginTop: 8,
+  },
+  dropZone: {
+    background: "#fff",
+    border: "2px dashed #d0d0d0",
+    borderRadius: 12,
+    padding: "60px 40px",
+    textAlign: "center",
+    cursor: "pointer",
+    transition: "all 0.2s",
+  },
+  hiddenInput: {
+    display: "none",
+  },
+  dropContent: {
+    pointerEvents: "none",
+  },
+  dropIcon: {
+    display: "block",
+    fontSize: 32,
+    color: "#999",
+    marginBottom: 16,
+  },
+  dropText: {
+    fontSize: 17,
+    color: "#333",
+    margin: 0,
+    fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif",
+  },
+  dropHint: {
+    fontSize: 13,
+    color: "#999",
+    marginTop: 8,
+    fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif",
+  },
+  error: {
+    color: "#b91c1c",
+    fontSize: 14,
+    fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif",
+    textAlign: "center",
+    marginTop: 16,
+  },
+  loadingContainer: {
+    textAlign: "center",
+    padding: "80px 20px",
+  },
+  loadingFile: {
+    fontSize: 14,
+    color: "#666",
+    margin: "0 0 8px 0",
+    fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif",
+  },
+  loadingText: {
+    fontSize: 20,
+    color: "#1a1a1a",
+    margin: 0,
+    fontStyle: "italic",
+  },
+  brief: {
+    background: "#fff",
+    padding: "48px",
+    borderRadius: 8,
+    boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+  },
+  briefHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 36,
+    paddingBottom: 24,
+    borderBottom: "1px solid #eee",
+    gap: 20,
+  },
+  briefTitle: {
+    fontSize: 22,
+    fontWeight: 400,
+    color: "#1a1a1a",
+    margin: 0,
+    flex: 1,
+    lineHeight: 1.3,
+  },
+  briefActions: {
+    display: "flex",
+    gap: 8,
+    flexShrink: 0,
+  },
+  copyButton: {
+    padding: "8px 14px",
+    fontSize: 13,
+    color: "#555",
+    background: "#f5f5f5",
+    border: "1px solid #e0e0e0",
+    borderRadius: 4,
+    cursor: "pointer",
+    fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif",
+  },
+  downloadButton: {
+    padding: "8px 14px",
+    fontSize: 13,
+    color: "#555",
+    background: "#f5f5f5",
+    border: "1px solid #e0e0e0",
+    borderRadius: 4,
+    cursor: "pointer",
+    fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif",
+  },
+  resetButton: {
+    padding: "8px 14px",
+    fontSize: 13,
+    color: "#fff",
+    background: "#1a1a1a",
+    border: "none",
+    borderRadius: 4,
+    cursor: "pointer",
+    fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif",
+  },
+  section: {
+    marginBottom: 28,
+  },
+  sectionTitle: {
+    fontSize: 11,
+    fontWeight: 600,
+    color: "#999",
+    textTransform: "uppercase",
+    letterSpacing: "1.5px",
+    marginBottom: 12,
+    fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif",
+  },
+  paragraph: {
+    fontSize: 17,
+    lineHeight: 1.75,
+    color: "#333",
+    margin: 0,
+  },
+  mainMessage: {
+    fontSize: 20,
+    lineHeight: 1.5,
+    color: "#1a1a1a",
+    margin: 0,
+    fontStyle: "italic",
+  },
+  explicitItem: {
+    fontSize: 16,
+    lineHeight: 1.65,
+    color: "#1a1a1a",
+    fontWeight: 500,
+    paddingLeft: 18,
+    position: "relative" as const,
+    marginBottom: 6,
+  },
+  deliverable: {
+    fontSize: 16,
+    lineHeight: 1.65,
+    color: "#444",
+    paddingLeft: 22,
+    position: "relative" as const,
+    marginBottom: 6,
+    fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif",
+  },
+  bulletList: {
+    margin: 0,
+    paddingLeft: 0,
+    listStyle: "none",
+  },
+  bullet: {
+    fontSize: 16,
+    lineHeight: 1.65,
+    color: "#444",
+    paddingLeft: 18,
+    position: "relative",
+    marginBottom: 6,
+  },
+  povBox: {
+    background: "#faf9f7",
+    padding: "20px 24px",
+    borderLeft: "3px solid #1a1a1a",
+  },
+  povLine: {
+    fontSize: 17,
+    lineHeight: 1.65,
+    color: "#1a1a1a",
+    margin: "0 0 6px 0",
+    fontStyle: "italic",
+  },
+  sampleLine: {
+    margin: "16px 0 0 0",
+    padding: "14px 20px",
+    background: "#f5f5f5",
+    borderRadius: 4,
+    fontSize: 15,
+    fontStyle: "italic",
+    color: "#555",
+    borderLeft: "none",
+  },
+  watchOut: {
+    fontSize: 16,
+    lineHeight: 1.65,
+    color: "#92400e",
+    paddingLeft: 18,
+    position: "relative",
+    marginBottom: 6,
+  },
+};
