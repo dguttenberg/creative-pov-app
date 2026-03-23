@@ -35,7 +35,7 @@ Rules:
 - No jargon, no fluff
 - CRITICAL: Only include claims — about audience, context, or strategy — that are directly supported by the original request. Do not infer, embellish, or invent. If the request doesn't say it, don't say it.
 - main_message must be a single declarative sentence rooted in what the request actually asks for
-- explicitly_requested: lift these directly and literally from the source material — these are client mandates, not interpretation
+- explicitly_requested: creative mandates only — things the client explicitly asked for that directly affect what the creative team writes, designs, or produces (required copy, specific inclusions, format specs, legal disclaimers to include in the work). Do NOT include logistics, distribution steps, delivery routing, stakeholder names, asset manifest notes, due dates, or anything about where the finished work gets sent. If it doesn't change what creative makes, leave it out.
 - creative_pov should be 2 lines max — opinionated guidance, not requirements
 - deliverables: list exactly what is being asked for, taken from the request — no additions
 - watch_outs should be specific to this project`;
