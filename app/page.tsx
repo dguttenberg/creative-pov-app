@@ -4,8 +4,6 @@ import { useState, useRef } from "react";
 
 type POVBrief = {
   title: string;
-  main_message: string;
-  explicitly_requested: string[];
   creative_problem: string;
   audience_reality: string[];
   creative_pov: string[];
@@ -13,7 +11,6 @@ type POVBrief = {
     bullets: string[];
     sample_line?: string;
   };
-  deliverables: string[];
   watch_outs: string[];
 };
 
@@ -72,12 +69,6 @@ export default function Home() {
 
     const text = `# ${brief.title}
 
-## Main Message
-${brief.main_message}
-
-## Explicitly Requested
-${brief.explicitly_requested.map(b => `• ${b}`).join("\n")}
-
 ## The Creative Problem
 ${brief.creative_problem}
 
@@ -90,9 +81,6 @@ ${brief.creative_pov.join("\n")}
 ## Tone & Language Guardrails
 ${brief.tone_guardrails.bullets.map(b => `• ${b}`).join("\n")}
 ${brief.tone_guardrails.sample_line ? `\n"${brief.tone_guardrails.sample_line}"` : ""}
-
-## Deliverables
-${brief.deliverables.map(b => `☐ ${b}`).join("\n")}
 
 ## Watch-Outs
 ${brief.watch_outs.map(b => `• ${b}`).join("\n")}`;
@@ -146,13 +134,6 @@ ${brief.watch_outs.map(b => `• ${b}`).join("\n")}`;
     }
     .section { margin-bottom: 22px; }
     p.body-text { font-size: 12.5pt; color: #333; line-height: 1.75; }
-    .main-message {
-      font-size: 15pt;
-      font-weight: 400;
-      color: #1a1a1a;
-      line-height: 1.5;
-      font-style: italic;
-    }
     ul { list-style: none; padding: 0; }
     li {
       font-family: -apple-system, Helvetica, Arial, sans-serif;
@@ -164,9 +145,6 @@ ${brief.watch_outs.map(b => `• ${b}`).join("\n")}`;
       position: relative;
     }
     li::before { content: "•"; position: absolute; left: 0; }
-    li.explicit::before { content: "—"; position: absolute; left: 0; color: #1a1a1a; }
-    li.explicit { color: #1a1a1a; font-weight: 500; }
-    li.deliverable::before { content: "☐"; position: absolute; left: 0; }
     .pov-box {
       background: #faf9f7;
       border-left: 3px solid #1a1a1a;
@@ -204,17 +182,6 @@ ${brief.watch_outs.map(b => `• ${b}`).join("\n")}`;
   <hr />
 
   <div class="section">
-    <div class="label">Main Message</div>
-    <p class="main-message">${esc(brief.main_message)}</p>
-  </div>
-
-  ${brief.explicitly_requested?.length ? `
-  <div class="section">
-    <div class="label">Explicitly Requested</div>
-    <ul>${brief.explicitly_requested.map(item => `<li class="explicit">${esc(item)}</li>`).join("")}</ul>
-  </div>` : ""}
-
-  <div class="section">
     <div class="label">The Creative Problem</div>
     <p class="body-text">${esc(brief.creative_problem)}</p>
   </div>
@@ -237,12 +204,6 @@ ${brief.watch_outs.map(b => `• ${b}`).join("\n")}`;
     ${brief.tone_guardrails.sample_line ? `<div class="sample">&ldquo;${esc(brief.tone_guardrails.sample_line)}&rdquo;</div>` : ""}
   </div>
 
-  ${brief.deliverables?.length ? `
-  <div class="section">
-    <div class="label">Deliverables</div>
-    <ul>${brief.deliverables.map(item => `<li class="deliverable">${esc(item)}</li>`).join("")}</ul>
-  </div>` : ""}
-
   <div class="section">
     <div class="label">Watch-Outs</div>
     <ul>${brief.watch_outs.map(item => `<li class="watch-out">${esc(item)}</li>`).join("")}</ul>
@@ -252,6 +213,7 @@ ${brief.watch_outs.map(b => `• ${b}`).join("\n")}`;
 </body>
 </html>`;
 
+    // Inject into a hidden iframe and trigger print → Save as PDF
     const iframe = document.createElement("iframe");
     iframe.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;border:0;opacity:0;";
     document.body.appendChild(iframe);
@@ -284,6 +246,7 @@ ${brief.watch_outs.map(b => `• ${b}`).join("\n")}`;
   return (
     <main style={styles.main}>
       <div style={styles.container}>
+        {/* Input View */}
         {!brief && !loading && (
           <>
             <header style={styles.header}>
@@ -315,6 +278,7 @@ ${brief.watch_outs.map(b => `• ${b}`).join("\n")}`;
           </>
         )}
 
+        {/* Loading State */}
         {loading && (
           <div style={styles.loadingContainer}>
             <p style={styles.loadingFile}>{fileName}</p>
@@ -322,6 +286,7 @@ ${brief.watch_outs.map(b => `• ${b}`).join("\n")}`;
           </div>
         )}
 
+        {/* Output Brief */}
         {brief && (
           <article style={styles.brief}>
             <div style={styles.briefHeader}>
@@ -338,22 +303,6 @@ ${brief.watch_outs.map(b => `• ${b}`).join("\n")}`;
                 </button>
               </div>
             </div>
-
-            <section style={styles.section}>
-              <h3 style={styles.sectionTitle}>Main Message</h3>
-              <p style={styles.mainMessage}>{brief.main_message}</p>
-            </section>
-
-            {brief.explicitly_requested?.length > 0 && (
-              <section style={styles.section}>
-                <h3 style={styles.sectionTitle}>Explicitly Requested</h3>
-                <ul style={styles.bulletList}>
-                  {brief.explicitly_requested.map((item, i) => (
-                    <li key={i} style={styles.explicitItem}>— {item}</li>
-                  ))}
-                </ul>
-              </section>
-            )}
 
             <section style={styles.section}>
               <h3 style={styles.sectionTitle}>The Creative Problem</h3>
@@ -391,17 +340,6 @@ ${brief.watch_outs.map(b => `• ${b}`).join("\n")}`;
                 </blockquote>
               )}
             </section>
-
-            {brief.deliverables?.length > 0 && (
-              <section style={styles.section}>
-                <h3 style={styles.sectionTitle}>Deliverables</h3>
-                <ul style={styles.bulletList}>
-                  {brief.deliverables.map((item, i) => (
-                    <li key={i} style={styles.deliverable}>☐ {item}</li>
-                  ))}
-                </ul>
-              </section>
-            )}
 
             <section style={styles.section}>
               <h3 style={styles.sectionTitle}>Watch-Outs</h3>
@@ -576,31 +514,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     lineHeight: 1.75,
     color: "#333",
     margin: 0,
-  },
-  mainMessage: {
-    fontSize: 20,
-    lineHeight: 1.5,
-    color: "#1a1a1a",
-    margin: 0,
-    fontStyle: "italic",
-  },
-  explicitItem: {
-    fontSize: 16,
-    lineHeight: 1.65,
-    color: "#1a1a1a",
-    fontWeight: 500,
-    paddingLeft: 18,
-    position: "relative" as const,
-    marginBottom: 6,
-  },
-  deliverable: {
-    fontSize: 16,
-    lineHeight: 1.65,
-    color: "#444",
-    paddingLeft: 22,
-    position: "relative" as const,
-    marginBottom: 6,
-    fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif",
   },
   bulletList: {
     margin: 0,

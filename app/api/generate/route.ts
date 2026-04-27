@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
-import pdf from "pdf-parse";
+import { extractText, getDocumentProxy } from "unpdf";
 import mammoth from "mammoth";
 
 const BRAIN_ENDPOINT = process.env.BRAIN_ENDPOINT;
@@ -10,21 +10,18 @@ const SYSTEM_PROMPT = `You are a senior creative director writing a brief for yo
 You write with clarity and opinion. You sound human, not corporate. You give direction, not documentation.
 Your briefs replace kickoff meetings for routine work. They should take under 2 minutes to read.
 
-You will receive a project request and some supplementary context. Transform it into a Creative POV Brief.
+You will receive interpreted project data. Transform it into a Creative POV Brief.
 
 Output ONLY valid JSON with this exact structure:
 {
   "title": "project title",
-  "main_message": "One sentence. The single thing the audience should think, feel, or do after seeing this work.",
-  "explicitly_requested": ["direct client ask 1", "direct client ask 2"],
   "creative_problem": "2-3 sentences describing the core creative challenge",
   "audience_reality": ["bullet 1", "bullet 2", "bullet 3"],
-  "creative_pov": ["short opinionated line 1", "line 2"],
+  "creative_pov": ["short opinionated line 1", "line 2", "line 3", "line 4"],
   "tone_guardrails": {
     "bullets": ["guardrail 1", "guardrail 2", "guardrail 3"],
     "sample_line": "optional example of the right tone"
   },
-  "deliverables": ["deliverable 1", "deliverable 2"],
   "watch_outs": ["watch out 1", "watch out 2"]
 }
 
@@ -33,27 +30,26 @@ Rules:
 - Sound like a creative director, not a strategist or PM
 - Be opinionated and direct
 - No jargon, no fluff
-- CRITICAL: Only include claims — about audience, context, or strategy — that are directly supported by the original request. Do not infer, embellish, or invent. If the request doesn't say it, don't say it.
-- main_message must be a single declarative sentence rooted in what the request actually asks for
-- explicitly_requested: creative mandates only — things the client explicitly asked for that directly affect what the creative team writes, designs, or produces (required copy, specific inclusions, format specs, legal disclaimers to include in the work). Do NOT include logistics, distribution steps, delivery routing, stakeholder names, asset manifest notes, due dates, or anything about where the finished work gets sent. If it doesn't change what creative makes, leave it out.
-- creative_pov should be 2 lines max — opinionated guidance, not requirements
-- deliverables: list exactly what is being asked for, taken from the request — no additions
-- watch_outs should be specific to this project`;
+- Creative POV should feel like guidance, not requirements
+- Watch-outs should be specific to this project`;
 
 async function extractTextFromFile(file: File): Promise<string> {
   const fileType = file.type;
   const fileName = file.name.toLowerCase();
 
+  // Plain text
   if (fileType === "text/plain" || fileName.endsWith(".txt")) {
     return await file.text();
   }
 
+  // PDF
   if (fileType === "application/pdf" || fileName.endsWith(".pdf")) {
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const data = await pdf(buffer);
-    return data.text;
+    const pdf = await getDocumentProxy(new Uint8Array(await file.arrayBuffer()));
+    const { text } = await extractText(pdf, { mergePages: true });
+    return text;
   }
 
+  // DOCX
   if (
     fileType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
     fileName.endsWith(".docx")
@@ -63,6 +59,7 @@ async function extractTextFromFile(file: File): Promise<string> {
     return result.value;
   }
 
+  // Images (JPG, PNG) - use Claude vision
   if (
     fileType.startsWith("image/") ||
     fileName.endsWith(".jpg") ||
@@ -121,6 +118,7 @@ export async function POST(request: Request) {
 
     const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
 
+    // Extract text from file
     let requestText: string;
     const fileName = file.name.toLowerCase();
 
@@ -142,6 +140,7 @@ export async function POST(request: Request) {
       );
     }
 
+    // Step 1: Call the Brain
     const brainResponse = await fetch(BRAIN_ENDPOINT as string, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -158,17 +157,23 @@ export async function POST(request: Request) {
     const brainData = await brainResponse.json();
     const intent = brainData.intent_object;
 
+    // Step 2: Generate Creative POV Brief
     const briefContext = `
 Project Source: ${file.name}
 
-ORIGINAL REQUEST (primary source — trust this above all else):
-${requestText}
-
-SUPPLEMENTARY CONTEXT (use only where directly supported by the original request above — do not introduce claims from here that aren't in the request):
-- Stated Purpose: ${intent?.intent?.why?.stated || "Not specified"}
+INTERPRETED INTENT:
+- Purpose: ${intent?.intent?.why?.stated || "Not specified"}
+- Inferred Goal: ${intent?.intent?.why?.inferred || "Not specified"}
+- Audience: ${intent?.intent?.who?.segments?.join(", ") || "Not specified"}
+- Audience Posture: ${intent?.intent?.who?.posture || "Not specified"}
 - Deliverables: ${intent?.intent?.what?.deliverables?.map((d: any) => d.deliverable_name).join(", ") || "Not specified"}
 - Channels: ${intent?.intent?.where?.channels?.join(", ") || "Not specified"}
 - Creative Constraints: ${intent?.intent?.where?.constraints?.join("; ") || "None specified"}
+- Speed Sensitivity: ${intent?.intent?.how_hard?.speed_sensitivity || "Normal"}
+- Risk Flags: ${intent?.uncertainty?.flags?.join("; ") || "None"}
+
+ORIGINAL REQUEST:
+${requestText}
 
 Generate a Creative POV Brief for this project.`;
 
