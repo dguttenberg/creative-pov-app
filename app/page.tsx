@@ -111,90 +111,120 @@ ${brief.watch_outs.map(b => `• ${b}`).join("\n")}`;
 <head>
   <meta charset="utf-8" />
   <title>${esc(brief.title)} — Creative POV Brief</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
   <style>
     @page { margin: 56pt 60pt; }
     @media print {
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
+    :root {
+      --dcp-midnight: #000531;
+      --dcp-grey: #E6E7E8;
+      --dcp-violet: #545DFF;
+      --dcp-green: #20FE8F;
+      --dcp-sky: #76BEFF;
+      --dcp-ember: #FF8371;
+      --dcp-white: #FFFFFF;
+      --dcp-font: 'DM Sans', 'Helvetica Neue', Arial, sans-serif;
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: Georgia, 'Times New Roman', serif;
-      color: #1a1a1a;
-      background: white;
-      font-size: 13pt;
+      font-family: var(--dcp-font);
+      color: var(--dcp-midnight);
+      background: var(--dcp-grey);
+      font-size: 12pt;
       line-height: 1.6;
     }
-    h1 {
+    .page-header {
+      background: var(--dcp-midnight);
+      padding: 24pt 0 20pt;
+      margin-bottom: 28pt;
+    }
+    .logo-mark {
+      font-family: var(--dcp-font);
+      font-weight: 700;
       font-size: 20pt;
-      font-weight: 400;
+      color: var(--dcp-green);
+      letter-spacing: -0.03em;
+    }
+    h1 {
+      font-size: 22pt;
+      font-weight: 700;
+      color: var(--dcp-midnight);
+      text-transform: uppercase;
+      letter-spacing: -0.01em;
       margin-bottom: 6px;
-      letter-spacing: -0.3px;
+      line-height: 1.1;
     }
     hr {
       border: none;
-      border-top: 1px solid #ddd;
-      margin: 18px 0 22px;
+      border-top: 2px solid var(--dcp-green);
+      margin: 16px 0 24px;
     }
     .label {
-      font-family: -apple-system, Helvetica, Arial, sans-serif;
+      font-family: var(--dcp-font);
       font-size: 7pt;
       font-weight: 700;
-      color: #999;
+      color: var(--dcp-violet);
       text-transform: uppercase;
-      letter-spacing: 1.8px;
-      margin-bottom: 9px;
+      letter-spacing: 0.2em;
+      margin-bottom: 8px;
     }
     .section { margin-bottom: 22px; }
-    p.body-text { font-size: 12.5pt; color: #333; line-height: 1.75; }
+    p.body-text { font-size: 12pt; color: var(--dcp-midnight); line-height: 1.75; }
     .main-message {
       font-size: 15pt;
-      font-weight: 400;
-      color: #1a1a1a;
-      line-height: 1.5;
+      font-weight: 600;
+      color: var(--dcp-midnight);
+      line-height: 1.45;
       font-style: italic;
     }
     ul { list-style: none; padding: 0; }
     li {
-      font-family: -apple-system, Helvetica, Arial, sans-serif;
-      font-size: 11.5pt;
-      color: #444;
+      font-family: var(--dcp-font);
+      font-size: 11pt;
+      color: rgba(0,5,49,0.75);
       padding-left: 14px;
       margin-bottom: 5px;
       line-height: 1.6;
       position: relative;
     }
-    li::before { content: "•"; position: absolute; left: 0; }
-    li.explicit::before { content: "—"; position: absolute; left: 0; color: #1a1a1a; }
-    li.explicit { color: #1a1a1a; font-weight: 500; }
-    li.deliverable::before { content: "☐"; position: absolute; left: 0; }
+    li::before { content: "•"; position: absolute; left: 0; color: var(--dcp-violet); }
+    li.explicit::before { content: "—"; position: absolute; left: 0; color: var(--dcp-midnight); }
+    li.explicit { color: var(--dcp-midnight); font-weight: 600; }
+    li.deliverable::before { content: "☐"; position: absolute; left: 0; color: var(--dcp-violet); }
     .pov-box {
-      background: #faf9f7;
-      border-left: 3px solid #1a1a1a;
+      background: var(--dcp-midnight);
+      border-left: 3px solid var(--dcp-green);
       padding: 16px 20px;
+      border-radius: 6px;
     }
     .pov-box p {
       font-style: italic;
-      color: #1a1a1a;
-      font-size: 12.5pt;
+      color: var(--dcp-white);
+      font-size: 12pt;
       margin-bottom: 5px;
       line-height: 1.65;
     }
     .sample {
-      background: #f5f5f5;
+      background: var(--dcp-midnight);
       padding: 12px 16px;
       margin-top: 12px;
       font-style: italic;
-      color: #555;
-      font-size: 11.5pt;
+      color: var(--dcp-green);
+      font-size: 11pt;
       line-height: 1.6;
+      border-radius: 4px;
     }
-    li.watch-out { color: #92400e; }
+    li.watch-out { color: var(--dcp-ember); }
+    li.watch-out::before { color: var(--dcp-ember); }
     .footer {
-      font-family: -apple-system, Helvetica, Arial, sans-serif;
+      font-family: var(--dcp-font);
       font-size: 7.5pt;
-      color: #bbb;
+      color: rgba(0,5,49,0.4);
       margin-top: 36px;
-      border-top: 1px solid #eee;
+      border-top: 1px solid rgba(84,93,255,0.2);
       padding-top: 10px;
     }
   </style>
@@ -248,7 +278,7 @@ ${brief.watch_outs.map(b => `• ${b}`).join("\n")}`;
     <ul>${brief.watch_outs.map(item => `<li class="watch-out">${esc(item)}</li>`).join("")}</ul>
   </div>
 
-  <div class="footer">Creative POV Brief</div>
+  <div class="footer">Creative POV Brief — DCP</div>
 </body>
 </html>`;
 
@@ -283,11 +313,21 @@ ${brief.watch_outs.map(b => `• ${b}`).join("\n")}`;
 
   return (
     <main style={styles.main}>
+      {/* Nav */}
+      <nav style={styles.nav}>
+        <div style={styles.logo}>
+          <span style={styles.logoMark}>DCP</span>
+          <span style={styles.logoWordmark}>Doner{"\n"}Colle{"\n"}Partners.</span>
+        </div>
+      </nav>
+
       <div style={styles.container}>
+        {/* Input View */}
         {!brief && !loading && (
           <>
             <header style={styles.header}>
-              <h1 style={styles.title}>Creative POV Brief</h1>
+              <div style={styles.eyebrow}>Creative Intelligence</div>
+              <h1 style={styles.title}>CREATIVE POV<br /><em style={styles.titleAccent}>BRIEF</em></h1>
               <p style={styles.tagline}>Drop a request. Get creative direction.</p>
             </header>
 
@@ -315,13 +355,18 @@ ${brief.watch_outs.map(b => `• ${b}`).join("\n")}`;
           </>
         )}
 
+        {/* Loading State */}
         {loading && (
           <div style={styles.loadingContainer}>
             <p style={styles.loadingFile}>{fileName}</p>
             <p style={styles.loadingText}>Reading the room...</p>
+            <div style={styles.loadingBar}>
+              <div style={styles.loadingBarFill} />
+            </div>
           </div>
         )}
 
+        {/* Output Brief */}
         {brief && (
           <article style={styles.brief}>
             <div style={styles.briefHeader}>
@@ -414,43 +459,127 @@ ${brief.watch_outs.map(b => `• ${b}`).join("\n")}`;
           </article>
         )}
       </div>
+
+      {/* Footer */}
+      <footer style={styles.footer}>
+        <div style={styles.footerInner}>
+          <div style={styles.logo}>
+            <span style={styles.logoMarkDark}>DCP</span>
+            <span style={styles.logoWordmarkDark}>Doner{"\n"}Colle{"\n"}Partners.</span>
+          </div>
+          <span style={styles.footerCopy}>© 2026 DonerColle Partners. All rights reserved.</span>
+        </div>
+      </footer>
     </main>
   );
 }
 
+const DCP = {
+  midnight: "#000531",
+  grey: "#E6E7E8",
+  violet: "#545DFF",
+  green: "#20FE8F",
+  sky: "#76BEFF",
+  ember: "#FF8371",
+  white: "#FFFFFF",
+  offwhite: "#F4F5F7",
+  font: "'DM Sans', 'Helvetica Neue', Arial, sans-serif",
+};
+
 const styles: { [key: string]: React.CSSProperties } = {
   main: {
     minHeight: "100vh",
-    background: "#faf9f7",
-    padding: "60px 20px",
-    fontFamily: "'Georgia', serif",
+    background: DCP.grey,
+    fontFamily: DCP.font,
+    display: "flex",
+    flexDirection: "column",
   },
+
+  // Nav
+  nav: {
+    background: DCP.midnight,
+    display: "flex",
+    alignItems: "center",
+    padding: "0 40px",
+    height: 68,
+    borderBottom: `1px solid rgba(32,254,143,0.12)`,
+    flexShrink: 0,
+  },
+  logo: {
+    display: "flex",
+    alignItems: "center",
+    gap: 14,
+  },
+  logoMark: {
+    fontFamily: DCP.font,
+    fontWeight: 700,
+    fontSize: 28,
+    color: DCP.green,
+    letterSpacing: "-0.03em",
+    lineHeight: 1,
+  },
+  logoWordmark: {
+    fontFamily: DCP.font,
+    fontWeight: 700,
+    fontSize: 11,
+    lineHeight: 1.25,
+    color: DCP.white,
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.04em",
+    borderLeft: `1px solid rgba(255,255,255,0.25)`,
+    paddingLeft: 14,
+    whiteSpace: "pre" as const,
+  },
+
+  // Main content
   container: {
-    maxWidth: 640,
+    maxWidth: 700,
     margin: "0 auto",
+    padding: "60px 20px",
+    flex: 1,
+    width: "100%",
   },
+
+  // Header / hero
   header: {
-    textAlign: "center",
-    marginBottom: 40,
+    marginBottom: 48,
+  },
+  eyebrow: {
+    fontFamily: DCP.font,
+    fontSize: 11,
+    fontWeight: 600,
+    letterSpacing: "0.24em",
+    textTransform: "uppercase" as const,
+    color: DCP.violet,
+    marginBottom: 16,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 400,
-    color: "#1a1a1a",
+    fontSize: 52,
+    fontWeight: 700,
+    color: DCP.midnight,
     margin: 0,
-    letterSpacing: "-0.5px",
+    letterSpacing: "-0.02em",
+    lineHeight: 1.0,
+    textTransform: "uppercase" as const,
+  },
+  titleAccent: {
+    color: DCP.violet,
+    fontStyle: "normal",
   },
   tagline: {
     fontSize: 15,
-    color: "#888",
-    marginTop: 8,
+    color: "rgba(0,5,49,0.5)",
+    marginTop: 16,
+    fontWeight: 400,
   },
+
+  // Drop zone
   dropZone: {
-    background: "#fff",
-    border: "2px dashed #d0d0d0",
+    background: DCP.midnight,
+    border: `2px dashed rgba(84,93,255,0.4)`,
     borderRadius: 12,
     padding: "60px 40px",
-    textAlign: "center",
+    textAlign: "center" as const,
     cursor: "pointer",
     transition: "all 0.2s",
   },
@@ -458,71 +587,94 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: "none",
   },
   dropContent: {
-    pointerEvents: "none",
+    pointerEvents: "none" as const,
   },
   dropIcon: {
     display: "block",
     fontSize: 32,
-    color: "#999",
+    color: DCP.green,
     marginBottom: 16,
   },
   dropText: {
     fontSize: 17,
-    color: "#333",
+    color: DCP.white,
     margin: 0,
-    fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif",
+    fontWeight: 500,
   },
   dropHint: {
     fontSize: 13,
-    color: "#999",
+    color: "rgba(255,255,255,0.4)",
     marginTop: 8,
-    fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif",
+    fontWeight: 400,
   },
   error: {
-    color: "#b91c1c",
+    color: DCP.ember,
     fontSize: 14,
-    fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif",
-    textAlign: "center",
+    textAlign: "center" as const,
     marginTop: 16,
+    fontWeight: 500,
   },
+
+  // Loading
   loadingContainer: {
-    textAlign: "center",
+    textAlign: "center" as const,
     padding: "80px 20px",
   },
   loadingFile: {
-    fontSize: 14,
-    color: "#666",
+    fontSize: 13,
+    color: "rgba(0,5,49,0.5)",
     margin: "0 0 8px 0",
-    fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif",
+    fontWeight: 500,
   },
   loadingText: {
-    fontSize: 20,
-    color: "#1a1a1a",
-    margin: 0,
-    fontStyle: "italic",
+    fontSize: 24,
+    color: DCP.midnight,
+    margin: "0 0 32px 0",
+    fontWeight: 700,
+    textTransform: "uppercase" as const,
+    letterSpacing: "-0.01em",
   },
+  loadingBar: {
+    width: 200,
+    height: 3,
+    background: "rgba(0,5,49,0.1)",
+    borderRadius: 2,
+    margin: "0 auto",
+    overflow: "hidden",
+  },
+  loadingBarFill: {
+    width: "60%",
+    height: "100%",
+    background: DCP.green,
+    borderRadius: 2,
+    animation: "none",
+  },
+
+  // Brief card
   brief: {
-    background: "#fff",
+    background: DCP.midnight,
     padding: "48px",
-    borderRadius: 8,
-    boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+    borderRadius: 12,
+    border: `1px solid rgba(84,93,255,0.2)`,
   },
   briefHeader: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "flex-start",
     marginBottom: 36,
-    paddingBottom: 24,
-    borderBottom: "1px solid #eee",
+    paddingBottom: 28,
+    borderBottom: `1px solid rgba(32,254,143,0.15)`,
     gap: 20,
   },
   briefTitle: {
-    fontSize: 22,
-    fontWeight: 400,
-    color: "#1a1a1a",
+    fontSize: 24,
+    fontWeight: 700,
+    color: DCP.white,
     margin: 0,
     flex: 1,
-    lineHeight: 1.3,
+    lineHeight: 1.2,
+    textTransform: "uppercase" as const,
+    letterSpacing: "-0.01em",
   },
   briefActions: {
     display: "flex",
@@ -530,77 +682,90 @@ const styles: { [key: string]: React.CSSProperties } = {
     flexShrink: 0,
   },
   copyButton: {
-    padding: "8px 14px",
-    fontSize: 13,
-    color: "#555",
-    background: "#f5f5f5",
-    border: "1px solid #e0e0e0",
-    borderRadius: 4,
+    padding: "9px 18px",
+    fontSize: 12,
+    color: "rgba(255,255,255,0.6)",
+    background: "transparent",
+    border: `1.5px solid rgba(255,255,255,0.15)`,
+    borderRadius: 40,
     cursor: "pointer",
-    fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif",
+    fontFamily: DCP.font,
+    fontWeight: 600,
+    letterSpacing: "0.08em",
+    textTransform: "uppercase" as const,
   },
   downloadButton: {
-    padding: "8px 14px",
-    fontSize: 13,
-    color: "#555",
-    background: "#f5f5f5",
-    border: "1px solid #e0e0e0",
-    borderRadius: 4,
+    padding: "9px 18px",
+    fontSize: 12,
+    color: "rgba(255,255,255,0.6)",
+    background: "transparent",
+    border: `1.5px solid rgba(255,255,255,0.15)`,
+    borderRadius: 40,
     cursor: "pointer",
-    fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif",
+    fontFamily: DCP.font,
+    fontWeight: 600,
+    letterSpacing: "0.08em",
+    textTransform: "uppercase" as const,
   },
   resetButton: {
-    padding: "8px 14px",
-    fontSize: 13,
-    color: "#fff",
-    background: "#1a1a1a",
+    padding: "9px 18px",
+    fontSize: 12,
+    color: DCP.midnight,
+    background: DCP.green,
     border: "none",
-    borderRadius: 4,
+    borderRadius: 40,
     cursor: "pointer",
-    fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif",
+    fontFamily: DCP.font,
+    fontWeight: 700,
+    letterSpacing: "0.08em",
+    textTransform: "uppercase" as const,
   },
+
+  // Brief sections
   section: {
-    marginBottom: 28,
+    marginBottom: 32,
   },
   sectionTitle: {
-    fontSize: 11,
-    fontWeight: 600,
-    color: "#999",
-    textTransform: "uppercase",
-    letterSpacing: "1.5px",
+    fontSize: 10,
+    fontWeight: 700,
+    color: DCP.violet,
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.2em",
     marginBottom: 12,
-    fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif",
+    fontFamily: DCP.font,
   },
   paragraph: {
-    fontSize: 17,
+    fontSize: 16,
     lineHeight: 1.75,
-    color: "#333",
+    color: "rgba(255,255,255,0.75)",
     margin: 0,
+    fontWeight: 400,
   },
   mainMessage: {
     fontSize: 20,
     lineHeight: 1.5,
-    color: "#1a1a1a",
+    color: DCP.white,
     margin: 0,
     fontStyle: "italic",
+    fontWeight: 500,
   },
   explicitItem: {
-    fontSize: 16,
+    fontSize: 15,
     lineHeight: 1.65,
-    color: "#1a1a1a",
-    fontWeight: 500,
+    color: DCP.white,
+    fontWeight: 600,
     paddingLeft: 18,
     position: "relative" as const,
     marginBottom: 6,
   },
   deliverable: {
-    fontSize: 16,
+    fontSize: 15,
     lineHeight: 1.65,
-    color: "#444",
+    color: "rgba(255,255,255,0.7)",
     paddingLeft: 22,
     position: "relative" as const,
     marginBottom: 6,
-    fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif",
+    fontWeight: 400,
   },
   bulletList: {
     margin: 0,
@@ -608,41 +773,88 @@ const styles: { [key: string]: React.CSSProperties } = {
     listStyle: "none",
   },
   bullet: {
-    fontSize: 16,
+    fontSize: 15,
     lineHeight: 1.65,
-    color: "#444",
+    color: "rgba(255,255,255,0.65)",
     paddingLeft: 18,
-    position: "relative",
+    position: "relative" as const,
     marginBottom: 6,
+    fontWeight: 400,
   },
   povBox: {
-    background: "#faf9f7",
+    background: "rgba(32,254,143,0.06)",
     padding: "20px 24px",
-    borderLeft: "3px solid #1a1a1a",
+    borderLeft: `3px solid ${DCP.green}`,
+    borderRadius: "0 8px 8px 0",
   },
   povLine: {
-    fontSize: 17,
+    fontSize: 16,
     lineHeight: 1.65,
-    color: "#1a1a1a",
+    color: DCP.white,
     margin: "0 0 6px 0",
     fontStyle: "italic",
+    fontWeight: 400,
   },
   sampleLine: {
     margin: "16px 0 0 0",
     padding: "14px 20px",
-    background: "#f5f5f5",
-    borderRadius: 4,
-    fontSize: 15,
+    background: "rgba(84,93,255,0.12)",
+    borderRadius: 6,
+    fontSize: 14,
     fontStyle: "italic",
-    color: "#555",
+    color: DCP.sky,
     borderLeft: "none",
+    fontWeight: 400,
   },
   watchOut: {
-    fontSize: 16,
+    fontSize: 15,
     lineHeight: 1.65,
-    color: "#92400e",
+    color: DCP.ember,
     paddingLeft: 18,
-    position: "relative",
+    position: "relative" as const,
     marginBottom: 6,
+    fontWeight: 400,
+  },
+
+  // Footer
+  footer: {
+    background: DCP.midnight,
+    borderTop: `1px solid rgba(32,254,143,0.12)`,
+    padding: "32px 40px",
+    flexShrink: 0,
+  },
+  footerInner: {
+    maxWidth: 700,
+    margin: "0 auto",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 20,
+  },
+  logoMarkDark: {
+    fontFamily: DCP.font,
+    fontWeight: 700,
+    fontSize: 20,
+    color: DCP.green,
+    letterSpacing: "-0.03em",
+    lineHeight: 1,
+  },
+  logoWordmarkDark: {
+    fontFamily: DCP.font,
+    fontWeight: 700,
+    fontSize: 10,
+    lineHeight: 1.25,
+    color: DCP.white,
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.04em",
+    borderLeft: `1px solid rgba(255,255,255,0.2)`,
+    paddingLeft: 12,
+    whiteSpace: "pre" as const,
+  },
+  footerCopy: {
+    fontFamily: DCP.font,
+    fontSize: 11,
+    color: "rgba(255,255,255,0.3)",
+    fontWeight: 400,
   },
 };
