@@ -84,7 +84,7 @@ async function extractTextFromImage(
   const mediaType = file.type as "image/jpeg" | "image/png" | "image/gif" | "image/webp";
 
   const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
+    model: "claude-sonnet-4-6",
     max_tokens: 2000,
     messages: [
       {
@@ -203,7 +203,7 @@ SUPPLEMENTARY CONTEXT (use only where directly supported by the original request
 Generate a Creative POV Brief for this project.`;
 
     const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-6",
       max_tokens: 1024,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: briefContext }],
